@@ -1,0 +1,170 @@
+Creating a **low-level web browser engine** like Blink or Gecko requires understanding the core components and how they interact at a systems level. These engines are highly optimized to provide fast rendering, efficient memory management, secure web browsing, and seamless user interactions. At the core of these engines, several low-level concepts are crucial to understand in order to build a functioning browser engine.
+
+Let’s dive into the **low-level workings** of a web browser engine like Blink, focusing on the key components and how they work together at a system and memory level:
+
+---
+
+### 1. **HTML Parsing**
+The first step in rendering a webpage is parsing the HTML document. This process involves **lexing** and **parsing** raw HTML text into a structure that can be understood and manipulated.
+
+#### **Low-Level Process:**
+- **Lexing**: The raw HTML is first tokenized into **tokens** using a **finite state machine** (FSM). Tokens represent HTML tags (`<div>`, `<p>`, etc.), text content, attributes, and other syntactic structures.
+- **Parsing**: These tokens are then parsed into a **DOM tree**. This is a tree structure that represents the HTML document as a hierarchy of nodes.
+
+  - **Element nodes** (e.g., `<div>`, `<p>`)
+  - **Text nodes** (e.g., content between tags like `Hello, World!`)
+  - **Attribute nodes** (e.g., `class="container"`)
+
+In low-level terms, this means managing memory for each node and handling the relationships between parent-child nodes efficiently. A typical approach is using **dynamic memory allocation** for creating nodes, where each node has a reference to its parent and children. This forms a **tree structure**.
+
+Example:
+- **Input HTML**:
+  ```html
+  <html><body><div>Hello World</div></body></html>
+  ```
+
+- **DOM Tree**:
+  ```
+  [html]
+    └── [body]
+          └── [div]
+                └── TextNode: "Hello World"
+  ```
+
+The **DOM tree** is an in-memory structure that the browser uses to represent the document for further manipulation (like CSS styling, JavaScript interaction, and event handling).
+
+---
+
+### 2. **CSS Parsing (CSSOM)**
+Once the DOM tree is constructed, the next step is applying styles. The **CSS Object Model (CSSOM)** represents parsed CSS rules and how they apply to the DOM.
+
+#### **Low-Level Process:**
+- **Lexing**: The CSS code is parsed into tokens using a lexer.
+- **Parsing**: These tokens are used to create **CSS rules** that describe the style of each element. Each rule has a selector (e.g., `.class`, `#id`, or `div`) and a set of properties (e.g., `color: red;`, `font-size: 16px`).
+
+At a low level, the CSSOM is essentially an **array of rules**, each of which is associated with one or more DOM elements.
+
+- For each **DOM node**, the CSSOM is queried to apply styles. In a complex browser, this query is optimized using **hash tables** or **maps** for fast lookups.
+
+Example:
+- **CSS Input**:
+  ```css
+  div {
+      color: red;
+      font-size: 16px;
+  }
+  ```
+
+- **CSSOM Representation**:
+  ```
+  [div] → { color: red, font-size: 16px }
+  ```
+
+---
+
+### 3. **Layout (Reflow)**
+The layout engine takes the **DOM** and **CSSOM** and computes the exact position and size of every element on the screen. This is called **reflow** or **layout**. The layout process involves **calculating the geometry** (width, height, position, margin, padding) of each element based on the document structure and styles.
+
+#### **Low-Level Process:**
+- **Box Model**: Each element in the DOM is essentially a box, consisting of:
+  - Content area (where text or images live)
+  - Padding (space between content and border)
+  - Border (outline of the box)
+  - Margin (space outside the border)
+
+- **Recursive Layout**: Layout is done recursively, where each element’s position is determined relative to its parent. If an element is positioned with `position: absolute`, its coordinates are calculated relative to its closest positioned ancestor (not the root).
+
+  At the lowest level, this might be done using a **breadth-first** or **depth-first traversal** of the DOM tree, calculating positions and sizes as it visits each node.
+
+Example:
+- The **DOM tree** might look like:
+  ```
+  [html]
+    └── [body]
+          └── [div]
+                └── TextNode: "Hello World"
+  ```
+
+- The **layout engine** will calculate the position and size for each node and assign them coordinates. For instance, `div` might have a width of `200px` and a height of `100px`, and it will be positioned at `(10px, 10px)` relative to its parent.
+
+---
+
+### 4. **Rendering (Painting)**
+Once layout is complete, the rendering engine needs to **paint** the elements onto the screen. This means converting the **layout tree** (with geometry) into actual pixels.
+
+#### **Low-Level Process:**
+- **Painting Steps**: Each **paintable element** (text, images, boxes) is rendered onto a **graphics context** (often using **GPU acceleration** via OpenGL, Vulkan, DirectX, or WebGL).
+  
+- **Canvas**: The screen is usually divided into a 2D grid of pixels, and elements are drawn into this grid. For text, the engine uses **font rendering** libraries. For images, it uses **bitmap operations**.
+
+- **Optimized Rendering**: Browsers use **tiling** to break the rendering area into small tiles to avoid recomputing the layout or painting for every part of the page. **Dirty regions** are used to only repaint parts of the screen that have changed.
+
+Example:
+- **Rendering the `<div>`**:
+  ```
+  [div] → Render a blue rectangle (width: 200px, height: 100px) at (10px, 10px)
+  ```
+
+- **Text inside `<div>`**:
+  ```
+  "Hello World" → Rendered as text inside the div box at `(10px, 10px)`
+  ```
+
+---
+
+### 5. **JavaScript Engine**
+The JavaScript engine is responsible for executing the JavaScript code embedded in or linked to the HTML page. **V8**, the JavaScript engine used in Blink, is highly optimized for speed and efficiency.
+
+#### **Low-Level Process:**
+- **Parsing and Compilation**: JavaScript code is first parsed into an **Abstract Syntax Tree (AST)**. Then it is compiled into **bytecode** or **machine code** for execution.
+
+- **Execution**: The engine uses a **stack-based execution model** for running JavaScript. It maintains an **execution stack** to handle function calls, local variables, and the **call stack**.
+
+- **Garbage Collection**: The engine automatically reclaims memory that is no longer needed. It uses **Mark-and-Sweep** or **Generational GC** techniques to periodically scan for unused objects and free memory.
+
+- **Event Loop**: JavaScript execution is driven by the **event loop**, which continually checks the **call stack** and **message queue** to execute tasks. This is key for handling asynchronous operations.
+
+---
+
+### 6. **Event Handling**
+Event handling is crucial for user interaction. Every time a user interacts with the page (e.g., clicking a button, typing), the browser triggers events and runs the corresponding event listeners.
+
+#### **Low-Level Process:**
+- **Event Dispatching**: Events are dispatched to the relevant DOM elements (via **bubbling** or **capturing** phases). Event handlers are executed when the event reaches the target element.
+  
+- **Event Loop**: Events are pushed onto the **event queue** and processed one-by-one in a non-blocking manner, ensuring smooth user interaction.
+
+  Example:
+  - When you click a button, a `click` event is dispatched to the DOM.
+  - The event handler is executed, potentially modifying the DOM or interacting with JavaScript.
+
+---
+
+### 7. **Networking (HTTP Requests)**
+The browser engine handles network requests (like fetching HTML, CSS, JS, and images) via the **network stack**.
+
+#### **Low-Level Process:**
+- **HTTP Requests**: The browser sends **HTTP(S)** requests to fetch resources. The request is routed through the **TCP/IP stack**, and the server responds with the resource data (HTML, CSS, etc.).
+  
+- **Caching**: Browsers store resources in memory or on disk to avoid re-fetching them on subsequent visits.
+
+- **Rendering Process Integration**: Once the resources are fetched, they are parsed and applied to the DOM (CSS and JS are executed, HTML is parsed, etc.).
+
+---
+
+### Conclusion: How it All Works Together
+At the low level, a web browser engine like Blink works by combining all of these components into a highly optimized pipeline:
+
+1. **HTML Parsing**: Turns raw HTML into the DOM tree.
+2. **CSS Parsing**: Builds a CSSOM that can be queried to apply styles.
+3. **Layout**: Determines the position and size of each element.
+4. **Rendering**: Converts the layout into pixels on the screen.
+5. **JavaScript Execution**: Executes scripts and handles dynamic interactions.
+6. **Event Handling**: Processes user input and triggers event handlers.
+7. **Networking**: Fetches external resources and handles caching.
+
+The
+
+ entire process runs in an event-driven, **non-blocking** manner, often leveraging multiple **threads** (e.g., one for layout, another for JavaScript execution, etc.) to ensure smooth performance. Modern browsers also optimize these tasks further by using **GPU acceleration**, **parallel processing**, and **just-in-time (JIT) compilation** for JavaScript, ensuring that they handle complex web pages quickly and efficiently.
+
+Creating an engine like Blink or Gecko from scratch involves understanding each of these components at a systems level and building efficient, optimized systems to handle the rendering, interactivity, and networking for modern web applications.
